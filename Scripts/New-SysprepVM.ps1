@@ -4,7 +4,7 @@
 .SYNOPSYS
     This script create new virtual machine based on a sysprep virtual hard disk
 .VERSION
-    0.1: Initial version
+    0.2: Variable corrections
 .AUTHOR
     Remy Larrieu
     Blog: www.remylarrieu.com
@@ -19,7 +19,7 @@
 .EXAMPLE
     New-SysprepVM -VMName "VMTest"
                 -VHDPath "C:\VMTemplate\VHD\" `
-                -Destination "C:\Hyper-V\" `
+                -Destination "C:\Hyper-V" `
                 -SwitchName "External" `
                 -Generation 2 `
                 -Memory 2048MB
@@ -57,21 +57,23 @@ Set-VMMemory -VMName $Name -StartupBytes $Memory
 if($SwitchName)
 {
     Write-Output "INFO : Adding Switch"
-    Add-VMNetworkAdapter -VMName $VMName -SwitchName $SwitchName
+    Add-VMNetworkAdapter -VMName $Name -SwitchName $SwitchName
 }
 
 Write-Output "INFO : Creating VHD folder"
 $VM_VHDFolder = "Virtual Hard Disks"
-New-Item -ItemType Directory -Path "$Destination$Name" -Name $VM_VHDFolder > $null
+New-Item -ItemType Directory -Path "$Destination\$Name" -Name $VM_VHDFolder > $null
 
 Write-Output "INFO : Copying Sysprep VHD"
 $SysprepVHD = Get-Childitem $VHDPath -Recurse -Include "*.vhd","*.vhdx"
-Copy-Item -Path $SysprepVHD.FullName -Destination "$Destination$Name\$VM_VHDFolder"
-$VHD = Get-Childitem "$Destination$Name\$VM_VHDFolder" -Recurse -Include "*.vhd","*.vhdx"
-Rename-Item -Path "$Destination$Name\$VM_VHDFolder" -NewName "$VMName.vhdx"
+Copy-Item -Path $SysprepVHD.FullName -Destination "$Destination\$Name\$VM_VHDFolder"
+$VHD = Get-Childitem "$Destination\$Name\$VM_VHDFolder" -Recurse -Include "*.vhd","*.vhdx"
+$Extension = $Name.Extension
+Rename-Item -Path $VHD.FullName -NewName "$Name$Extension"
+$VHD = Get-Childitem "$Destination\$Name\$VM_VHDFolder" -Recurse -Include "*.vhd","*.vhdx"
 
-Write-Output "Adding VHD to the VM"
-Add-VMHardDiskDrive -VMName $Name -Path "$Destination$Name\$VM_VHDFolder"
+Write-Output "INFO : Adding VHD to the VM"
+Add-VMHardDiskDrive -VMName $Name -Path $VHD.FullName
 
 Write-Output "INFO : Changing VM startup order"
 if($Generation -eq 1)
